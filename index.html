@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MGM - Gold Trading Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Excel Library -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<!-- Screenshot Library (html2canvas) -->
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<style>
+:root {
+    --primary-gold: #D4AF37;
+    --dark-gold: #B8860B;
+    --bg-color: #f4f7f6;
+    --text-color: #333;
+    --header-bg: #2c3e50;
+    --row-hover: #fff8e1;
+    --border-color: #dee2e6;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-color);
+    padding: 20px;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.container {
+    max-width: 1300px;
+    margin: auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* Header Styling */
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 3px solid var(--primary-gold);
+    padding-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.header-section h2 {
+    margin: 0;
+    color: var(--header-bg);
+    font-size: 1.5rem;
+}
+
+.date-box {
+    font-weight: bold;
+    color: #555;
+    background: #f9f9f9;
+    padding: 5px 15px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+}
+
+/* Table Styling */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 950px;
+    border: 2px solid #333;
+}
+
+thead th {
+    background: var(--header-bg);
+    color: white;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid #465f75;
+    border-bottom: 2px solid #1a252f;
+}
+
+tbody tr {
+    transition: background 0.2s;
+}
+
+tbody tr:hover {
+    background: var(--row-hover);
+}
+
+td {
+    padding: 4px;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid var(--border-color);
+    height: 45px;
+}
+
+/* Input Styling */
+input {
+    width: calc(100% - 2px);
+    height: 35px;
+    padding: 0 5px;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 14px;
+    border-radius: 0;
+    box-sizing: border-box;
+    display: block;
+    margin: 0 auto;
+}
+
+input:focus {
+    outline: none;
+    background-color: #fff;
+    box-shadow: inset 0 0 0 2px var(--primary-gold);
+    z-index: 10;
+    position: relative;
+}
+
+input.locked {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #2c3e50;
+    cursor: default;
+}
+
+/* Buttons */
+.btn {
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    font-weight: 600;
+}
+
+.btn:active { transform: scale(0.98); }
+
+.btn-add { background: #28a745; color: white; }
+.btn-reset { background: #dc3545; color: white; }
+.btn-exp { background: #007bff; color: white; }
+.btn-share { background: #17a2b8; color: white; }
+.btn-del { 
+    background: transparent; 
+    color: #dc3545; 
+    border: 1px solid #dc3545;
+    padding: 5px 10px; 
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+}
+.btn-del:hover { background: #dc3545; color: white; }
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+/* Footer Totals */
+tfoot td {
+    background-color: #e9ecef;
+    font-weight: bold;
+    font-size: 15px;
+    color: #2c3e50;
+    padding: 8px;
+    border: 1px solid #b0b8c1;
+    border-top: 2px solid #2c3e50;
+    height: 45px;
+}
+
+/* Footer style: shiny black and bold (Your specific CSS) */
+.footer{
+    max-width:1100px;
+    margin:auto;
+    margin-top:20px;
+    text-align:center;
+    font-weight:bold;
+    font-size:16px;
+    color:#000000;
+    text-shadow: 1px 1px 2px #555555;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header-section { flex-direction: column; text-align: center; }
+    .controls { flex-direction: column; gap: 10px; }
+    .controls .left, .controls .right { width: 100%; text-align: center; }
+    input { font-size: 16px; }
+}
+
+/* Print Styles */
+@media print {
+    body { background: white; padding: 0; }
+    .container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
+    .controls, .btn-del, .date-box { display: none; }
+    table { border: 2px solid black; }
+    th, td { 
+        border: 1px solid #000 !important; 
+        color: black !important;
+        background: white !important;
+        height: auto;
+        padding: 5px;
+    }
+    thead th { 
+        background: #eee !important; 
+        color: black !important; 
+        -webkit-print-color-adjust: exact;
+    }
+    input {
+        border: none !important; 
+        background: transparent !important; 
+        box-shadow: none !important;
+        padding: 0;
+        height: auto;
+        width: 100%;
+    }
+    input.locked {
+        background: transparent !important;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    
+    <div class="header-section">
+        <h2>MGM - Liberia Gold Trading Calculator</h2>
+        <div class="date-box" id="currentDate"></div>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="goldTable">
+            <thead>
+                <tr>
+                    <th style="width:40px;">#</th>
+                    <th>Supplier</th>
+                    <th>Gross Weight (g)</th>
+                    <th>Karat (K)</th>
+                    <th>Pure Weight (g)</th>
+                    <th>Fixed Weight</th>
+                    <th>Per OZ Rate ($)</th>
+                    <th>Discount ($)</th>
+                    <th>$ Amount</th>
+                    <th>Eff. Rate ($/OZ)</th>
+                    <th style="width:60px;">Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="tableBody">
+                <!-- Rows will be generated by JS -->
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <td colspan="2">TOTAL</td>
+                    <td id="totalGross">0.00</td>
+                    <td id="avgKarat">0.00</td>
+                    <td id="totalPure">0.00</td>
+                    <td colspan="3"></td>
+                    <td id="totalAmount">0.00</td>
+                    <td id="totalRate">0.00</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="controls">
+        <div class="left">
+            <button class="btn btn-add" onclick="addRow()">➕ Add Line</button>
+            <button class="btn btn-reset" onclick="resetData()">🔄 Reset Data</button>
+        </div>
+        <div class="right">
+            <button class="btn btn-share" onclick="shareScreenshot()">📤 Share Screenshot</button>
+            <button class="btn btn-exp" onclick="exportToExcel()">📊 Export Excel</button>
+        </div>
+    </div>
+
+    <!-- Updated class to 'footer' -->
+    <div class="footer">
+        Compiled by Saurabh Shah
+    </div>
+
+</div>
+
+<script>
+
+// 1. Initialization
+document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
+
+// Load saved data or initialize default empty row
+window.onload = function() {
+    loadSavedData();
+};
+
+// 2. Helper Functions
+function formatNumber(num, decimals = 2){
+    return Number(num).toLocaleString('en-US',{
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    });
+}
+
+function cleanNumber(val){
+    return parseFloat((val || "0").toString().replace(/,/g,'')) || 0;
+}
+
+// 3. Core Logic
+
+function calculateRow(input){
+    let row = input.closest("tr");
+    let cells = row.querySelectorAll("input");
+
+    // Index mapping:
+    // 0: supplier, 1: gross, 2: karat, 3: pureWeight, 4: fixedWeight, 5: perOZ, 6: discount, 7: amount, 8: effectiveRate
+    let gross = cleanNumber(cells[1].value);
+    let karat = cleanNumber(cells[2].value);
+    
+    // Validation: Karat cannot exceed 24
+    if(karat > 24) {
+        cells[2].value = 24;
+        karat = 24;
+    }
+
+    let perOZ = cleanNumber(cells[5].value);
+    let discount = cleanNumber(cells[6].value);
+
+    // Calculations
+    let pureWeight = gross * karat / 24;
+    // Formula: ((Rate/31.1 * Purity%) - Discount) * Gross
+    let amount = ((perOZ / 31.1 * karat / 24) - discount) * gross;
+    let effectiveRate = pureWeight > 0 ? (amount / pureWeight) * 31.10347 : 0;
+
+    // Update UI
+    cells[3].value = pureWeight ? formatNumber(pureWeight) : "";
+    cells[7].value = amount ? formatNumber(amount, 0) : "";
+    cells[8].value = effectiveRate ? formatNumber(effectiveRate) : "";
+
+    calculateTotals();
+    saveData();
+}
+
+function calculateTotals(){
+    let rows = document.querySelectorAll("#tableBody tr");
+    let totalGross = 0, totalPure = 0, totalAmount = 0;
+
+    rows.forEach(row => {
+        let inputs = row.querySelectorAll("input");
+        totalGross += cleanNumber(inputs[1].value);
+        totalPure += cleanNumber(inputs[3].value);
+        totalAmount += cleanNumber(inputs[7].value);
+    });
+
+    let avgKarat = totalGross > 0 ? (totalPure / totalGross) * 24 : 0;
+    let totalRate = totalPure > 0 ? (totalAmount / totalPure) * 31.10347 : 0;
+
+    document.getElementById("totalGross").innerText = formatNumber(totalGross);
+    document.getElementById("totalPure").innerText = formatNumber(totalPure);
+    document.getElementById("avgKarat").innerText = formatNumber(avgKarat);
+    document.getElementById("totalAmount").innerText = formatNumber(totalAmount, 0);
+    document.getElementById("totalRate").innerText = formatNumber(totalRate);
+}
+
+// 4. Row Management
+
+function createRow(data = {}){
+    let body = document.getElementById("tableBody");
+    let row = document.createElement("tr");
+
+    row.innerHTML = `
+    <td class="rowNo"></td>
+    <td><input type="text" placeholder="Supplier Name" value="${data.supplier || ''}" oninput="saveData()"></td>
+    <td><input type="number" step="0.01" placeholder="0.00" value="${data.gross || ''}" oninput="calculateRow(this)"></td>
+    <td><input type="number" step="0.01" placeholder="0-24" value="${data.karat || ''}" oninput="calculateRow(this)"></td>
+    <td><input type="text" class="locked" readonly></td>
+    <td><input type="text" placeholder="Fixed Wt" value="${data.fixedWeight || ''}" oninput="saveData()"></td>
+    <td><input type="number" step="0.01" placeholder="0.00" value="${data.rate || ''}" oninput="calculateRow(this)"></td>
+    <td><input type="number" step="0.01" placeholder="0.00" value="${data.discount || ''}" oninput="calculateRow(this)"></td>
+    <td><input type="text" class="locked" readonly></td>
+    <td><input type="text" class="locked" readonly></td>
+    <td><button class="btn-del" onclick="deleteRow(this)">✖</button></td>
+    `;
+    
+    body.appendChild(row);
+    updateRowNumbers();
+    
+    if(data.gross || data.rate) {
+        let inputs = row.querySelectorAll("input");
+        calculateRow(inputs[1]); 
+    }
+}
+
+function addRow(){
+    createRow();
+    saveData();
+}
+
+function deleteRow(btn){
+    let body = document.getElementById("tableBody");
+    if(body.rows.length === 1){
+        let inputs = btn.closest("tr").querySelectorAll("input");
+        inputs.forEach(i => i.value = '');
+        calculateTotals();
+    } else {
+        btn.closest("tr").remove();
+        updateRowNumbers();
+        calculateTotals();
+    }
+    saveData();
+}
+
+function updateRowNumbers(){
+    let rows = document.querySelectorAll(".rowNo");
+    rows.forEach((cell, index) => {
+        cell.innerText = index + 1;
+    });
+}
+
+// 5. Memory Persistence (localStorage)
+
+function saveData() {
+    let rows = document.querySelectorAll("#tableBody tr");
+    let tableData = [];
+    rows.forEach(row => {
+        let inputs = row.querySelectorAll("input");
+        tableData.push({
+            supplier: inputs[0].value,
+            gross: inputs[1].value,
+            karat: inputs[2].value,
+            fixedWeight: inputs[4].value,
+            rate: inputs[5].value,
+            discount: inputs[6].value
+        });
+    });
+    localStorage.setItem('mgm_gold_calculator_data', JSON.stringify(tableData));
+}
+
+function loadSavedData() {
+    let saved = localStorage.getItem('mgm_gold_calculator_data');
+    document.getElementById("tableBody").innerHTML = "";
+    if (saved) {
+        let tableData = JSON.parse(saved);
+        if (tableData.length > 0) {
+            tableData.forEach(data => createRow(data));
+            return;
+        }
+    }
+    createRow();
+}
+
+function resetData() {
+    if (confirm("Are you sure you want to reset all data for a new file?")) {
+        localStorage.removeItem('mgm_gold_calculator_data');
+        document.getElementById("tableBody").innerHTML = "";
+        createRow();
+        calculateTotals();
+    }
+}
+
+// 6. Share Feature (Screenshot)
+
+async function shareScreenshot() {
+    const elementToCapture = document.querySelector('.container');
+    
+    // Provide visual feedback
+    const shareBtn = document.querySelector('.btn-share');
+    const originalText = shareBtn.innerText;
+    shareBtn.innerText = "⏳ Preparing...";
+    shareBtn.disabled = true;
+
+    try {
+        const canvas = await html2canvas(elementToCapture, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff"
+        });
+
+        canvas.toBlob(async (blob) => {
+            const file = new File([blob], "Gold_Calculation.png", { type: "image/png" });
+
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: 'MGM Gold Calculation',
+                        text: `Gold Trading Calculation dated ${document.getElementById('currentDate').innerText}`,
+                        files: [file]
+                    });
+                } catch (err) {
+                    console.error("Error sharing:", err);
+                    if(err.name !== 'AbortError') {
+                        alert("Sharing failed. Please try saving manually.");
+                        downloadImage(canvas);
+                    }
+                }
+            } else {
+                alert("Your browser does not support direct image sharing. Downloading the image instead.");
+                downloadImage(canvas);
+            }
+
+            shareBtn.innerText = originalText;
+            shareBtn.disabled = false;
+        });
+
+    } catch (error) {
+        console.error("Error generating screenshot:", error);
+        alert("Could not generate screenshot.");
+        shareBtn.innerText = originalText;
+        shareBtn.disabled = false;
+    }
+}
+
+function downloadImage(canvas) {
+    const link = document.createElement('a');
+    link.download = `Gold_Calc_${new Date().toISOString().slice(0,10)}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+}
+
+// 7. Export to Excel
+
+function exportToExcel(){
+    let wb = XLSX.utils.book_new();
+    let ws_data = [];
+
+    ws_data.push(["MGM - Liberia Gold Trading Calculator"]);
+    ws_data.push(["Date:", document.getElementById('currentDate').innerText]);
+    ws_data.push([]);
+
+    ws_data.push([
+        "#", "Supplier", "Gross Weight", "Karat", "Pure Weight", "Fixed Weight",
+        "Per OZ Rate", "Discount", "$ Amount", "Effective Rate"
+    ]);
+
+    let rows = document.querySelectorAll("#tableBody tr");
+    let startRow = 5; 
+
+    rows.forEach((row, index) => {
+        let excelRow = startRow + index;
+        let inputs = row.querySelectorAll("input");
+
+        ws_data.push([
+            index + 1,
+            inputs[0].value,
+            cleanNumber(inputs[1].value),
+            cleanNumber(inputs[2].value),
+            { f: `C${excelRow}*D${excelRow}/24` },
+            inputs[4].value,
+            cleanNumber(inputs[5].value),
+            cleanNumber(inputs[6].value),
+            { f: `((G${excelRow}/31.1*D${excelRow}/24)-H${excelRow})*C${excelRow}` },
+            { f: `IF(E${excelRow}>0,(I${excelRow}/E${excelRow})*31.10347,0)` }
+        ]);
+    });
+
+    let totalRow = startRow + rows.length;
+
+    ws_data.push([
+        "TOTAL", "",
+        { f: `SUM(C${startRow}:C${totalRow-1})` },
+        { f: `IF(C${totalRow}>0,(E${totalRow}/C${totalRow})*24,0)` },
+        { f: `SUM(E${startRow}:E${totalRow-1})` },
+        "", "", "",
+        { f: `SUM(I${startRow}:I${totalRow-1})` },
+        { f: `IF(E${totalRow}>0,(I${totalRow}/E${totalRow})*31.10347,0)` }
+    ]);
+
+    let ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    ws['!cols'] = [
+        {wch:5}, {wch:15}, {wch:15}, {wch:8}, {wch:15},
+        {wch:15}, {wch:15}, {wch:12}, {wch:15}, {wch:15}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Gold Calculation");
+    XLSX.writeFile(wb, `Gold_Trade_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+</script>
+
+</body>
+</html>
