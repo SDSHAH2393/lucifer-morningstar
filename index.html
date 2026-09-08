@@ -480,20 +480,39 @@ function resetData() {
 // 6. Share Feature (Screenshot)
 
 async function shareScreenshot() {
-    const elementToCapture = document.querySelector('.container');
-    
-    // Provide visual feedback
+    const container = document.querySelector('.container');
+    const tableWrapper = document.querySelector('.table-wrapper');
     const shareBtn = document.querySelector('.btn-share');
     const originalText = shareBtn.innerText;
+    
     shareBtn.innerText = "⏳ Preparing...";
     shareBtn.disabled = true;
 
+    // Save original styles
+    const origContainerWidth = container.style.width;
+    const origContainerMaxW = container.style.maxWidth;
+    const origWrapperOverflow = tableWrapper.style.overflow;
+
     try {
-        const canvas = await html2canvas(elementToCapture, {
+        // Expand container to match full unclipped table scroll width
+        const fullWidth = Math.max(document.getElementById('goldTable').scrollWidth + 50, 1000);
+        container.style.width = fullWidth + 'px';
+        container.style.maxWidth = 'none';
+        tableWrapper.style.overflow = 'visible';
+
+        const canvas = await html2canvas(container, {
             scale: 2,
             useCORS: true,
-            backgroundColor: "#ffffff"
+            backgroundColor: "#ffffff",
+            windowWidth: fullWidth + 100,
+            scrollX: 0,
+            scrollY: 0
         });
+
+        // Restore UI styles instantly
+        container.style.width = origContainerWidth;
+        container.style.maxWidth = origContainerMaxW;
+        tableWrapper.style.overflow = origWrapperOverflow;
 
         canvas.toBlob(async (blob) => {
             const file = new File([blob], "Gold_Calculation.png", { type: "image/png" });
@@ -506,14 +525,11 @@ async function shareScreenshot() {
                         files: [file]
                     });
                 } catch (err) {
-                    console.error("Error sharing:", err);
-                    if(err.name !== 'AbortError') {
-                        alert("Sharing failed. Please try saving manually.");
+                    if (err.name !== 'AbortError') {
                         downloadImage(canvas);
                     }
                 }
             } else {
-                alert("Your browser does not support direct image sharing. Downloading the image instead.");
                 downloadImage(canvas);
             }
 
@@ -522,7 +538,11 @@ async function shareScreenshot() {
         });
 
     } catch (error) {
-        console.error("Error generating screenshot:", error);
+        // Restore UI styles on error
+        container.style.width = origContainerWidth;
+        container.style.maxWidth = origContainerMaxW;
+        tableWrapper.style.overflow = origWrapperOverflow;
+        
         alert("Could not generate screenshot.");
         shareBtn.innerText = originalText;
         shareBtn.disabled = false;
